@@ -11,6 +11,9 @@ services:
       - ./frontend-react:/app
     depends_on:
       - backend
+      - auth
+      - user
+      - payment
     profiles:
       - react
 
@@ -20,6 +23,11 @@ services:
       - "8080:80"
     volumes:
       - ./frontend-html:/usr/share/nginx/html
+    depends_on:
+      - backend
+      - auth
+      - user
+      - payment
     profiles:
       - html
 
