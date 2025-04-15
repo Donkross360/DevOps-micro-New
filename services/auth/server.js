@@ -3,11 +3,26 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
+const helmet = require('helmet');
 const { Pool } = require('pg');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
-app.use(express.json());
-app.use(cors());
+
+// Security middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*'
+}));
+app.use(express.json({ limit: '10kb' }));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later'
+});
+app.use(limiter);
 
 const pool = new Pool({
   user: process.env.POSTGRES_USER,
@@ -26,14 +41,24 @@ const users = new Map([
   }]
 ]);
 
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  
-  const user = users.get(email);
-  if (!user) return res.status(404).send('User not found');
+app.post('/login', async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Input validation
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).send('Invalid credentials');
+    const user = users.get(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
     expiresIn: 86400 // 24 hours
