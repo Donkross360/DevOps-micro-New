@@ -1,10 +1,31 @@
 # Application Setup Guide
 
-## System Requirements
+## Development vs Production
+
+### Development Setup
+Requirements:
 - Docker Engine 20.10+
 - Docker Compose 2.0+
-- 4GB RAM (8GB recommended)
-- Node.js 18+ (for development only)
+- 4GB RAM
+- Node.js 18+
+
+Features:
+- Local development only
+- Simplified configuration
+- Debugging tools
+
+### Production Setup
+Requirements:
+- Kubernetes cluster 1.25+
+- Helm 3.0+
+- 8GB+ RAM per node
+- Persistent storage
+
+Features:
+- High availability
+- Auto-scaling
+- Production-grade security
+- Centralized monitoring
 
 ## Getting Started
 

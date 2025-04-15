@@ -1,6 +1,9 @@
 version: '3.8'
 
-# Frontend Selection:
+# DEVELOPMENT ONLY - For production use Kubernetes manifests
+# ---------------------------------------------------------
+
+# Frontend Selection (dev only):
 # Use --profile react for React frontend (default)
 # Use --profile html for HTML frontend
 # Example: docker-compose --profile html up

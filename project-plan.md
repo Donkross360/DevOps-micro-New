@@ -75,9 +75,35 @@ curl -I http://localhost:3000
 - [x] Protected routes enforce JWT
 - [x] Database connection working
 
-## 4. Production Environment Setup
-- Kubernetes configuration for production deployment.
-- Security measures for production (e.g., secret management, access controls).
+## 4. Environment Separation
+
+### Development (Docker Compose)
+- Local development only
+- Simplified networking (bridge)
+- Ephemeral storage
+- Debugging tools enabled
+- Test credentials
+
+### Production (Kubernetes)
+- Proper namespacing
+- Network policies
+- Persistent volumes
+- Secret management
+- Resource limits
+- Horizontal pod autoscaling
+- Ingress controllers
+- TLS termination
+
+### Key Differences
+| Aspect          | Development            | Production              |
+|----------------|-----------------------|-------------------------|
+| Orchestration | Docker Compose        | Kubernetes             |
+| Networking    | Bridge                | CNI plugins            |
+| Storage       | Local volumes         | Persistent volumes     |
+| Secrets       | .env files            | Sealed Secrets/Vault   |
+| Scaling       | Single instance       | HPA + Cluster Autoscaler|
+| Monitoring    | Basic logs            | Prometheus + Grafana   |
+| Security      | Development TLS       | Production-grade TLS   |
 
 ## 5. Monitoring and Logging
 - Setup Prometheus, Grafana, Loki, and Fluent Bit for both environments.
