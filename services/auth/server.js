@@ -17,18 +17,19 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Minimal in-memory user store (replace with DB in production)
+// Modern user store with email login
 const users = new Map([
-  ['admin', {
+  ['admin@example.com', {
     id: 1,
-    password: bcrypt.hashSync(process.env.DEFAULT_PASSWORD || 'admin123', 8)
+    password: bcrypt.hashSync(process.env.DEFAULT_PASSWORD || 'admin123', 8),
+    name: 'Admin User'
   }]
 ]);
 
 app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   
-  const user = users.find(u => u.username === username);
+  const user = users.get(email);
   if (!user) return res.status(404).send('User not found');
 
   const valid = await bcrypt.compare(password, user.password);
@@ -47,7 +48,13 @@ app.get('/validate', (req, res) => {
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) return res.status(500).send('Failed to authenticate token');
-    res.status(200).send({ valid: true, userId: decoded.id });
+    const user = Array.from(users.values()).find(u => u.id === decoded.id);
+    res.status(200).send({ 
+      valid: true, 
+      userId: decoded.id,
+      email: decoded.email,
+      name: user?.name || ''
+    });
   });
 });
 

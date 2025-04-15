@@ -16,14 +16,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
         try {
             await AuthService.login(username, password);
             showProtectedContent();
             fetchProtectedData();
-            usernameDisplay.textContent = username;
+            usernameDisplay.textContent = email.split('@')[0]; // Show name before @
             showStatus('Login successful!', 'success');
         } catch (error) {
             showStatus('Login failed. Please try again.', 'error');

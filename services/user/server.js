@@ -31,7 +31,7 @@ const verifyToken = (req, res, next) => {
 
 app.get('/users', verifyToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, username FROM users');
+    const result = await pool.query('SELECT id, email, name FROM users');
     res.json(result.rows);
   } catch (err) {
     res.status(500).send('Server error');
