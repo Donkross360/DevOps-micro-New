@@ -50,7 +50,7 @@ You can choose between `frontend-react` and `frontend-html`. To run the desired 
   docker-compose --profile html up
   ```
 
-## Step 4: Running the Backend and Other Services
+## Step 5: Running the Backend and Other Services
 
 To start the backend and other services, ensure they are defined in your `docker-compose.yml` and run:
 
