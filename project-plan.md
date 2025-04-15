@@ -7,7 +7,11 @@
 ## 2. Architecture Design
 - Define the microservices architecture.
 - List of services: frontend-react, frontend-html, backend, auth, user, payment, and db.
-- Security considerations for each service.
+- Security considerations for each service, including JWT-based authentication flow:
+  - Frontend communicates with the `auth` service for login and registration.
+  - `auth` service issues JWTs for authenticated sessions.
+  - Frontend includes JWT in requests to the backend for authorization.
+  - Backend verifies JWTs to ensure secure access to resources.
 
 ## 3. Development Environment Setup
 - Docker Compose configuration for local development.
