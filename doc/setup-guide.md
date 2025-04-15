@@ -47,8 +47,15 @@ You can choose between `frontend-react` and `frontend-html`. To run the desired 
 To start the backend and other services, ensure they are defined in your `docker-compose.yml` and run:
 
 ```bash
-docker-compose up
+docker-compose up --build
 ```
+
+This command will build the images for each service and start them. You can verify that each service is running by accessing their respective endpoints:
+
+- Backend: `http://localhost:5000`
+- Auth: `http://localhost:4000`
+- User: `http://localhost:6000`
+- Payment: `http://localhost:7000`
 
 ## Step 5: Accessing the Application
 
