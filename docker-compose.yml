@@ -11,6 +11,8 @@ services:
       - ./frontend-react:/app
     depends_on:
       - backend
+    profiles:
+      - react
 
   frontend-html:
     image: frontend-html:latest
@@ -18,6 +20,8 @@ services:
       - "8080:80"
     volumes:
       - ./frontend-html:/usr/share/nginx/html
+    profiles:
+      - html
 
   backend:
     image: backend:latest
