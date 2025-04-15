@@ -2,14 +2,14 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:4000';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 class AuthService {
-    static async login(username, password) {
+    static async login(email, password) {
         try {
             const response = await fetch(`${API_BASE_URL}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email, password })
             });
 
             if (!response.ok) throw new Error('Login failed');

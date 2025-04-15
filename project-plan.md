@@ -6,7 +6,11 @@
 
 ## 2. Architecture Design
 - Define the microservices architecture.
-- List of services: frontend-react, frontend-html, backend, auth, user, payment, and db.
+- List of services:
+  - Frontends:
+    - frontend-react: Modern React SPA with JWT auth
+    - frontend-html: Lightweight HTML/JS implementation
+  - Backend services: backend, auth, user, payment, and db.
 - Security considerations for each service, including JWT-based authentication flow:
   - Frontend communicates with the `auth` service for login and registration.
   - `auth` service issues JWTs for authenticated sessions.

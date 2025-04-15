@@ -2,22 +2,20 @@ version: '3.8'
 
 services:
   frontend-react:
-    image: frontend-react:latest
+    build: ./frontend-react
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - JWT_SECRET=${JWT_SECRET}
-      - DEFAULT_PASSWORD=${DEFAULT_PASSWORD}
+      - REACT_APP_API_URL=http://auth:4000
+      - REACT_APP_BACKEND_URL=http://backend:5000
     volumes:
       - ./frontend-react:/app
+      - /app/node_modules
     depends_on:
       - backend
       - auth
-      - user
-      - payment
-    profiles:
-      - react
+    stdin_open: true
+    tty: true
 
   frontend-html:
     image: frontend-html:latest
