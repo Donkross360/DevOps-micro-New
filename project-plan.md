@@ -94,6 +94,25 @@ curl -I http://localhost:3000
 - Ingress controllers
 - TLS termination
 
+### Kubernetes Manifests (k8s/)
+```
+base/
+  ├── apps/          # Application deployments
+  ├── networking/    # Services, ingresses
+  ├── storage/       # PVCs, volumes
+  └── config/        # ConfigMaps, Secrets
+
+overlays/
+  ├── production/    # Production configs
+  ├── staging/       # Staging configs
+  └── dev/           # Optional remote dev
+```
+
+### Deployment Process
+1. `kustomize build overlays/production | kubectl apply -f -`
+2. ArgoCD sync (GitOps)
+3. Helm for complex charts
+
 ### Key Differences
 | Aspect          | Development            | Production              |
 |----------------|-----------------------|-------------------------|
