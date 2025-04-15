@@ -17,13 +17,14 @@ const pool = new Pool({
 });
 
 // Middleware to verify JWT
+// Minimal but secure token verification
 const verifyToken = (req, res, next) => {
-  const token = req.headers['x-access-token'];
-  if (!token) return res.status(403).send('No token provided');
-
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.sendStatus(401);
+  
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(500).send('Failed to authenticate token');
-    req.userId = decoded.id;
+    if (err) return res.sendStatus(403);
+    req.user = decoded;
     next();
   });
 };

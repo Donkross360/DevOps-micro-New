@@ -17,14 +17,13 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Simple mock user for development
-const users = [
-  {
+// Minimal in-memory user store (replace with DB in production)
+const users = new Map([
+  ['admin', {
     id: 1,
-    username: 'admin',
-    password: 'admin123' // In production, use proper hashing
-  }
-];
+    password: bcrypt.hashSync(process.env.DEFAULT_PASSWORD || 'admin123', 8)
+  }]
+]);
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -32,7 +31,8 @@ app.post('/login', async (req, res) => {
   const user = users.find(u => u.username === username);
   if (!user) return res.status(404).send('User not found');
 
-  if (password !== user.password) return res.status(401).send('Invalid credentials');
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) return res.status(401).send('Invalid credentials');
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
     expiresIn: 86400 // 24 hours

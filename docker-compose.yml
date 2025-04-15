@@ -6,7 +6,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV:-development}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEFAULT_PASSWORD=${DEFAULT_PASSWORD}
     volumes:
       - ./frontend-react:/app
     depends_on:
