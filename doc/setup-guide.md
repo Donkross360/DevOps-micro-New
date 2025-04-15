@@ -28,7 +28,15 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 ```
 
-## Step 3: Choose Your Frontend
+## Step 3: Build and Run Services
+
+Build the Docker images for each service:
+
+```bash
+docker-compose build
+```
+
+## Step 4: Choose Your Frontend
 
 You can choose between `frontend-react` and `frontend-html`. To run the desired frontend, use Docker Compose profiles:
 
