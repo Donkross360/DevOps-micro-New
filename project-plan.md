@@ -18,7 +18,10 @@
   - Backend verifies JWTs to ensure secure access to resources.
 
 ## 3. Development Environment Setup
-- Docker Compose configuration for local development.
+- Docker Compose configuration for local development with profile-based frontend selection:
+  - `--profile react`: React frontend (default)
+  - `--profile html`: HTML frontend
+  - Example: `docker-compose --profile html up`
 - Basic security setup for development (e.g., environment variables, JWT).
 
 ## 4. Production Environment Setup

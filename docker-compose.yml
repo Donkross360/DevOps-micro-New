@@ -1,5 +1,10 @@
 version: '3.8'
 
+# Frontend Selection:
+# Use --profile react for React frontend (default)
+# Use --profile html for HTML frontend
+# Example: docker-compose --profile html up
+
 services:
   frontend-react:
     build: ./frontend-react
@@ -16,9 +21,12 @@ services:
       - auth
     stdin_open: true
     tty: true
+    profiles: ["react"]
 
   frontend-html:
-    image: frontend-html:latest
+    build: 
+      context: ./frontend-html
+      dockerfile: Dockerfile
     ports:
       - "8080:80"
     volumes:
@@ -26,10 +34,21 @@ services:
     depends_on:
       - backend
       - auth
-      - user
-      - payment
-    profiles:
-      - html
+    profiles: ["html"]
+
+  # Default services (always run)
+  backend:
+    image: backend:latest
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - auth
 
   backend:
     image: backend:latest
