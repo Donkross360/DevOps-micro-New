@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  frontend-react:
+    image: frontend-react:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./frontend-react:/app
+    depends_on:
+      - backend
+
+  frontend-html:
+    image: frontend-html:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend-html:/usr/share/nginx/html
+
+  backend:
+    image: backend:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+
+  auth:
+    image: auth:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./auth:/app
+
+  user:
+    image: user:latest
+    ports:
+      - "6000:6000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./user:/app
+
+  payment:
+    image: payment:latest
+    ports:
+      - "7000:7000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./payment:/app
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
