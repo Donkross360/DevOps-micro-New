@@ -5,12 +5,31 @@
 - Key stakeholders and team members.
 
 ## 2. Architecture Design
-- Define the microservices architecture.
-- List of services:
-  - Frontends:
-    - frontend-react: Modern React SPA with JWT auth
-    - frontend-html: Lightweight HTML/JS implementation
-  - Backend services: backend, auth, user, payment, and db.
+
+### Current Services
+- **Frontends**:
+  - `frontend-react`: React SPA with:
+    - JWT auth flow
+    - Protected routes
+    - API service integration
+  - `frontend-html`: Lightweight implementation:
+    - Vanilla JS auth
+    - Nginx serving
+
+- **Backend Services**:
+  - `auth`: JWT authentication service
+    - Login/validate endpoints
+    - Secure token handling
+  - `backend`: Core API service
+    - Protected endpoints
+    - Database integration
+  - `db`: PostgreSQL database
+    - Health checks
+    - Persistent storage
+
+- **Future Services**:
+  - `user`: User management (in development)
+  - `payment`: Payment processing (planned)
 - Security considerations for each service, including JWT-based authentication flow:
   - Frontend communicates with the `auth` service for login and registration.
   - `auth` service issues JWTs for authenticated sessions.
@@ -18,11 +37,43 @@
   - Backend verifies JWTs to ensure secure access to resources.
 
 ## 3. Development Environment Setup
-- Docker Compose configuration for local development with profile-based frontend selection:
-  - `--profile react`: React frontend (default)
-  - `--profile html`: HTML frontend
-  - Example: `docker-compose --profile html up`
-- Basic security setup for development (e.g., environment variables, JWT).
+
+### Current Implementation
+- Docker Compose with:
+  - Frontend selection via profiles:
+    - `--profile react`: React frontend (default)
+    - `--profile html`: HTML frontend (nginx)
+  - Health checks for all services
+  - Proper service dependencies
+  - Network isolation
+- Security features:
+  - JWT authentication with secret rotation
+  - Rate limiting (100 requests/15min)
+  - Input validation
+  - CORS restrictions
+  - Helmet security headers
+
+### Developer Quickstart
+```bash
+# 1. Copy and setup environment
+cp .env.example .env
+make secrets
+
+# 2. Start services (React frontend)
+docker-compose --profile react up -d
+
+# 3. Verify
+curl -I http://localhost:3000
+```
+
+### Verification Checklist
+- [x] All services start healthy
+- [x] Frontends accessible:
+  - React: http://localhost:3000
+  - HTML: http://localhost:8080
+- [x] Auth endpoints functional
+- [x] Protected routes enforce JWT
+- [x] Database connection working
 
 ## 4. Production Environment Setup
 - Kubernetes configuration for production deployment.
