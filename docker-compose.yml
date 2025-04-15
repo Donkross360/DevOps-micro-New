@@ -41,6 +41,9 @@ services:
       - ./backend:/app
     depends_on:
       - db
+      - auth
+      - user
+      - payment
 
   auth:
     image: auth:latest
