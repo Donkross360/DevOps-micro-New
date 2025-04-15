@@ -16,26 +16,22 @@ const pool = new Pool({
   port: 5432,
 });
 
-// JWT verification middleware
+// Basic token verification
 const verifyToken = (req, res, next) => {
   const token = req.headers['x-access-token'];
-  if (!token) return res.status(403).send('No token provided');
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(500).send('Failed to authenticate token');
-    req.userId = decoded.id;
+  if (!token) return res.status(403).send('No token');
+  
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
     next();
-  });
+  } catch {
+    res.status(403).send('Invalid token');
+  }
 };
 
-// Protected API endpoint
-app.get('/api/data', verifyToken, async (req, res) => {
-  try {
-    // Example protected data
-    res.json({ message: 'This is protected data', userId: req.userId });
-  } catch (err) {
-    res.status(500).send('Server error');
-  }
+// Single protected endpoint
+app.get('/api/data', verifyToken, (req, res) => {
+  res.json({ message: 'Protected data' });
 });
 
 const PORT = process.env.PORT || 5000;

@@ -17,12 +17,12 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Mock user data - in production, use proper database
+// Simple mock user for development
 const users = [
   {
     id: 1,
     username: 'admin',
-    password: bcrypt.hashSync('admin123', 8)
+    password: 'admin123' // In production, use proper hashing
   }
 ];
 
@@ -32,8 +32,7 @@ app.post('/login', async (req, res) => {
   const user = users.find(u => u.username === username);
   if (!user) return res.status(404).send('User not found');
 
-  const passwordIsValid = bcrypt.compareSync(password, user.password);
-  if (!passwordIsValid) return res.status(401).send('Invalid credentials');
+  if (password !== user.password) return res.status(401).send('Invalid credentials');
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
     expiresIn: 86400 // 24 hours
