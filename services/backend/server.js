@@ -34,7 +34,16 @@ app.get('/api/data', verifyToken, (req, res) => {
   res.json({ message: 'Protected data' });
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Backend service running on port ${PORT}`);
+  // Verify DB connection on startup
+  pool.query('SELECT 1')
+    .then(() => console.log('Database connected'))
+    .catch(err => console.error('Database connection error', err));
 });
