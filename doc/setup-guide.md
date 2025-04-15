@@ -1,32 +1,85 @@
-# Setup Guide
+# Application Setup Guide
 
-Welcome to the DevOps Tooling Setup Guide. This document will guide you through setting up the development environment for our project.
+## System Requirements
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+- 4GB RAM (8GB recommended)
+- Node.js 18+ (for development only)
 
-## Prerequisites
+## Getting Started
 
-- Docker and Docker Compose installed on your machine.
-- Basic understanding of Docker and command-line operations.
-
-## Step 1: Clone the Repository
-
-First, clone the repository to your local machine:
-
+### 1. Clone the Repository
 ```bash
-git clone <repository-url>
-cd <repository-name>
+git clone https://github.com/yourorg/yourproject.git
+cd yourproject
 ```
 
-## Step 2: Environment Configuration
+### 2. Initial Setup
+```bash
+# Copy example environment file
+cp .env.example .env
 
-Ensure you have a `.env` file in the root directory with the following content:
-
-```env
-NODE_ENV=development
-FLASK_ENV=development
-JWT_SECRET=your_jwt_secret_key
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+# Generate secure secrets (Linux/MacOS)
+make secrets
+# Windows alternative:
+# python -c "import secrets; print(f'JWT_SECRET={secrets.token_hex(32)}')" >> .env
 ```
+
+### 3. Start Services
+Choose your frontend:
+```bash
+# For React frontend (default):
+docker-compose --profile react up -d
+
+# For HTML frontend:
+docker-compose --profile html up -d
+```
+
+## Accessing the Application
+
+| Service          | URL                     | Default Credentials           |
+|------------------|-------------------------|-------------------------------|
+| React Frontend   | http://localhost:3000   | admin@example.com / admin123  |
+| HTML Frontend    | http://localhost:8080   | admin@example.com / admin123  |
+| Backend API      | http://localhost:5000   | -                             |
+| Auth Service     | http://localhost:4000   | -                             |
+
+## First-Time Setup
+
+1. Open the React (3000) or HTML (8080) frontend
+2. Login with default credentials
+3. Change the admin password immediately
+
+## Common Operations
+
+**Restart services:**
+```bash
+docker-compose restart
+```
+
+**View logs:**
+```bash
+docker-compose logs -f
+```
+
+**Reset database:**
+```bash
+docker-compose down -v
+docker-compose up -d
+```
+
+## Troubleshooting
+
+**Port conflicts?**
+- Check running containers: `docker ps`
+- Stop conflicting services
+
+**Login issues?**
+- Verify auth service is running: `curl -I http://localhost:4000/health`
+- Check JWT_SECRET in .env matches across services
+
+**Database problems?**
+- Check connection: `docker-compose exec db psql -U app_user -d app_db`
 
 ## Step 3: Build and Run Services
 

@@ -105,8 +105,21 @@ curl -I http://localhost:3000
 - Plan for regular security audits and vulnerability assessments.
 
 ## 11. Documentation and Training
-- Create user guides and setup instructions.
-- Provide training sessions for team members.
+
+### User Documentation
+- [Setup Guide](doc/setup-guide.md) - Getting started instructions
+- API Reference (coming soon)
+- Troubleshooting Guide (coming soon)
+
+### Admin Documentation
+- [Production Deployment Guide](doc/production.md) (coming soon)
+- Monitoring Setup
+- Backup Procedures
+
+### Training Materials
+- Developer Onboarding Checklist
+- API Usage Examples
+- Security Best Practices
 
 ## 12. Progress Tracking and Updates
 - Regularly update the document with completed tasks and any changes.
