@@ -61,10 +61,20 @@ app.post('/login', async (req, res, next) => {
     }
 
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: 86400 // 24 hours
+      expiresIn: '15m' // Short-lived access token
+    });
+    
+    const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, {
+      expiresIn: '7d'
     });
 
-    res.status(200).send({ token });
+    // Store refresh token in database
+    await pool.query(
+      'INSERT INTO refresh_tokens (user_id, token) VALUES ($1, $2)',
+      [user.id, refreshToken]
+    );
+
+    res.status(200).send({ token, refreshToken });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error' });

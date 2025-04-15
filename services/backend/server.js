@@ -5,6 +5,24 @@ const cors = require('cors');
 const { Pool } = require('pg');
 
 const app = express();
+const winston = require('winston');
+
+// Configure logging
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+});
+
+// Add logging middleware
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`);
+  next();
+});
+
 app.use(express.json());
 app.use(cors());
 
