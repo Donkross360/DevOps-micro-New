@@ -4,12 +4,15 @@
 // In production, these would be set by the deployment process
 window.API_BASE_URL = 'http://localhost:4000';
 window.BACKEND_URL = 'http://localhost:5000';
+window.PAYMENT_URL = 'http://localhost:7000';
 
 // For local development with Docker, use these settings:
 // window.API_BASE_URL = 'http://auth:4000';
 // window.BACKEND_URL = 'http://backend:5000';
+// window.PAYMENT_URL = 'http://payment:7000';
 
 console.log('Frontend configuration loaded:', {
   API_BASE_URL: window.API_BASE_URL,
-  BACKEND_URL: window.BACKEND_URL
+  BACKEND_URL: window.BACKEND_URL,
+  PAYMENT_URL: window.PAYMENT_URL
 });
