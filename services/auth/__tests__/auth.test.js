@@ -1,6 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const { createServer } = require('../server');
+const pool = require('../db');
 jest.mock('../db', () => ({
   query: jest.fn().mockResolvedValue({ rows: [] }),
   end: jest.fn().mockResolvedValue(true)
