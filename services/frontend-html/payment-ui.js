@@ -54,7 +54,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('card-errors').innerHTML += '<br>Please check your card details and try again.';
                 } else if (result.error.type === 'validation_error') {
                     document.getElementById('card-errors').innerHTML += '<br>Please check the form fields and try again.';
+                } else if (result.error.type === 'api_error') {
+                    document.getElementById('card-errors').innerHTML += '<br>There was an issue with the payment service. Please try again later.';
+                } else if (result.error.type === 'authentication_error') {
+                    document.getElementById('card-errors').innerHTML += '<br>Your card was declined. Please try a different payment method.';
                 }
+                
+                // Shake the form to indicate error
+                form.classList.add('shake');
+                setTimeout(() => form.classList.remove('shake'), 500);
             } else {
                 // The payment succeeded!
                 if (result.paymentIntent.status === 'succeeded') {

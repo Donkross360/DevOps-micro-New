@@ -204,6 +204,26 @@ function createApp() {
     }
   });
 
+  // Error handling middleware
+  app.use((err, req, res, next) => {
+    logger.error('Unhandled error:', err);
+    
+    // Determine appropriate status code
+    let statusCode = 500;
+    if (err.name === 'ValidationError') statusCode = 400;
+    if (err.name === 'UnauthorizedError') statusCode = 401;
+    if (err.name === 'ForbiddenError') statusCode = 403;
+    if (err.name === 'NotFoundError') statusCode = 404;
+    
+    // Send appropriate response
+    res.status(statusCode).json({
+      error: err.message || 'Internal Server Error',
+      code: err.code || 'SERVER_ERROR',
+      // Only include stack trace in development
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  });
+
   return app;
 }
 

@@ -257,42 +257,86 @@ app.post('/webhook', async (req, res) => {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
         
-        // Update payment status in database
-        await pool.query(
-          'UPDATE payments SET status = $1 WHERE payment_id = $2',
-          ['completed', paymentIntent.id]
-        );
-        
-        logger.info(`PaymentIntent ${paymentIntent.id} succeeded`);
+        try {
+          // Update payment status in database
+          const result = await pool.query(
+            'UPDATE payments SET status = $1 WHERE payment_id = $2 RETURNING id',
+            ['completed', paymentIntent.id]
+          );
+          
+          if (result.rowCount === 0) {
+            logger.warn(`PaymentIntent ${paymentIntent.id} succeeded but no matching record found in database`);
+          } else {
+            logger.info(`PaymentIntent ${paymentIntent.id} succeeded, updated payment ID: ${result.rows[0].id}`);
+          }
+          
+          // Additional business logic could be added here
+          // e.g., send confirmation email, update inventory, etc.
+        } catch (dbError) {
+          logger.error(`Database error updating payment status: ${dbError.message}`);
+          // We don't throw here to avoid sending a failure response to Stripe
+          // which would cause them to retry the webhook
+        }
         break;
         
       case 'payment_intent.payment_failed':
         const failedPayment = event.data.object;
         
-        // Update payment status in database
-        await pool.query(
-          'UPDATE payments SET status = $1 WHERE payment_id = $2',
-          ['failed', failedPayment.id]
-        );
-        
-        logger.error(`PaymentIntent ${failedPayment.id} failed: ${failedPayment.last_payment_error?.message || 'Unknown error'}`);
+        try {
+          // Update payment status in database
+          const result = await pool.query(
+            'UPDATE payments SET status = $1, updated_at = NOW() WHERE payment_id = $2 RETURNING id',
+            ['failed', failedPayment.id]
+          );
+          
+          const errorMessage = failedPayment.last_payment_error?.message || 'Unknown error';
+          logger.error(`PaymentIntent ${failedPayment.id} failed: ${errorMessage}`);
+          
+          // Additional failure handling logic could be added here
+          // e.g., notify customer, retry logic, etc.
+        } catch (dbError) {
+          logger.error(`Database error updating failed payment: ${dbError.message}`);
+        }
         break;
         
       case 'charge.refunded':
         const refund = event.data.object;
         
-        // Update payment status for the refunded charge
-        await pool.query(
-          'UPDATE payments SET status = $1 WHERE payment_id = $2',
-          ['refunded', refund.payment_intent]
-        );
+        try {
+          // Update payment status for the refunded charge
+          const result = await pool.query(
+            'UPDATE payments SET status = $1, updated_at = NOW() WHERE payment_id = $2 RETURNING id',
+            ['refunded', refund.payment_intent]
+          );
+          
+          logger.info(`Charge ${refund.id} refunded for payment ${refund.payment_intent}`);
+          
+          // Additional refund handling logic
+          // e.g., update order status, notify customer, etc.
+        } catch (dbError) {
+          logger.error(`Database error updating refunded payment: ${dbError.message}`);
+        }
+        break;
         
-        logger.info(`Charge ${refund.id} refunded for payment ${refund.payment_intent}`);
+      case 'payment_intent.created':
+        logger.info(`PaymentIntent ${event.data.object.id} created`);
+        break;
+        
+      case 'payment_intent.canceled':
+        try {
+          await pool.query(
+            'UPDATE payments SET status = $1, updated_at = NOW() WHERE payment_id = $2',
+            ['canceled', event.data.object.id]
+          );
+          logger.info(`PaymentIntent ${event.data.object.id} canceled`);
+        } catch (dbError) {
+          logger.error(`Database error updating canceled payment: ${dbError.message}`);
+        }
         break;
         
       default:
         // Log unhandled event types
-        logger.info(`Unhandled event type: ${event.type}`);
+        logger.info(`Received webhook event type: ${event.type} (not specifically handled)`);
     }
     
     res.json({ received: true });
