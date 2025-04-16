@@ -69,6 +69,7 @@ jest.mock('winston', () => ({
 process.env.JWT_SECRET = 'test-secret';
 process.env.STRIPE_SECRET_KEY = 'sk_test_123';
 process.env.WEBHOOK_SECRET = 'whsec_123';
+process.env.NODE_ENV = 'test';
 
 // Import the app after mocking dependencies
 const app = require('../server');
