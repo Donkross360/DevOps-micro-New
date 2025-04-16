@@ -63,13 +63,12 @@ describe('User Service', () => {
       bcrypt.genSalt = jest.fn().mockResolvedValue('salt');
       bcrypt.hash = jest.fn().mockResolvedValue('hashed_password');
       
-      // Mock DB to check if user exists
-      pool.query.mockResolvedValueOnce({ rows: [] });
-      
-      // Mock DB to insert user
-      pool.query.mockResolvedValueOnce({ 
-        rows: [{ id: 1, email: 'test@example.com', name: 'Test User' }] 
-      });
+      // Mock DB to check if user exists and insert user
+      pool.query
+        .mockResolvedValueOnce({ rows: [] }) // Check if exists
+        .mockResolvedValueOnce({ 
+          rows: [{ id: 1, email: 'test@example.com', name: 'Test User' }] 
+        });
       
       const res = await request(app)
         .post('/register')
@@ -115,6 +114,7 @@ describe('User Service', () => {
       
       expect(res.statusCode).toBe(409);
       expect(res.body).toHaveProperty('error', 'User already exists');
+      expect(pool.query).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -138,6 +138,7 @@ describe('User Service', () => {
       expect(res.body).toHaveProperty('id', 1);
       expect(res.body).toHaveProperty('email', 'test@example.com');
       expect(res.body).toHaveProperty('name', 'Test User');
+      expect(pool.query).toHaveBeenCalledTimes(1);
     });
     
     it('should return 401 without token', async () => {
@@ -155,6 +156,7 @@ describe('User Service', () => {
       
       expect(res.statusCode).toBe(404);
       expect(res.body).toHaveProperty('error', 'User not found');
+      expect(pool.query).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -182,6 +184,7 @@ describe('User Service', () => {
         'UPDATE users SET name = $1 WHERE id = $2 RETURNING id, email, name',
         ['Updated Name', 1]
       );
+      expect(pool.query).toHaveBeenCalledTimes(1);
     });
   });
 });
