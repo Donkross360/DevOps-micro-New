@@ -1,0 +1,6 @@
+{"level":"info","message":"User service running on port 6000"}
+{"address":"172.19.0.2","code":"ECONNREFUSED","errno":-111,"level":"error","message":"Database connection error connect ECONNREFUSED 172.19.0.2:5432","port":5432,"stack":"Error: connect ECONNREFUSED 172.19.0.2:5432\n    at /app/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","syscall":"connect"}
+{"level":"info","message":"User service running on port 6000"}
+{"level":"info","message":"Database connected"}
+{"level":"info","message":"User service running on port 6000"}
+{"level":"info","message":"Database connected"}

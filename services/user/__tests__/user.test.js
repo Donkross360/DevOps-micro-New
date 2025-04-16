@@ -64,12 +64,13 @@ describe('User Service', () => {
       bcrypt.genSalt = jest.fn().mockResolvedValue('salt');
       bcrypt.hash = jest.fn().mockResolvedValue('hashed_password');
       
-      // Mock DB responses
+      // Reset all previous mocks
+      pool.query.mockReset();
+      
+      // Mock DB responses for this test only
       pool.query
-        .mockResolvedValueOnce({ rows: [] }) // First check if user exists
-        .mockResolvedValueOnce({ rows: [] }) // Second check (if needed)
-        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // First check user exists
-        .mockResolvedValueOnce({
+        .mockResolvedValueOnce({ rows: [] }) // Check if user exists
+        .mockResolvedValueOnce({ 
           rows: [{ id: 1, email: 'test@example.com', name: 'Test User' }] 
         }); // Insert response
       
@@ -103,6 +104,9 @@ describe('User Service', () => {
     });
     
     it('should return 409 if user already exists', async () => {
+      // Reset all previous mocks
+      pool.query.mockReset();
+      
       // Mock DB to return existing user
       pool.query.mockResolvedValueOnce({ 
         rows: [{ id: 1, email: 'existing@example.com' }] 
@@ -123,11 +127,14 @@ describe('User Service', () => {
 
   describe('User Profile', () => {
     it('should return user profile with valid token', async () => {
+      // Reset all previous mocks
+      pool.query.mockReset();
+      
       // Mock DB to return user
       pool.query.mockResolvedValueOnce({ 
         rows: [{ 
           id: 1, 
-          email: 'existing@example.com',  // Match the email from existing user test
+          email: 'test@example.com',  // Match the expected email
           name: 'Test User',
           created_at: new Date().toISOString()
         }] 
@@ -150,14 +157,18 @@ describe('User Service', () => {
     });
     
     it('should return 404 if user not found', async () => {
+      // Reset all previous mocks
+      pool.query.mockReset();
+      
       // Mock DB to return no user
       pool.query.mockResolvedValueOnce({ rows: [] });
-      // Mock token verification to return a user ID that doesn't exist
-      jest.spyOn(jwt, 'verify').mockImplementation(() => ({ id: 999 }));
+      
+      // Create a special token for a non-existent user
+      const nonExistentUserToken = jwt.sign({ id: 999 }, process.env.JWT_SECRET);
       
       const res = await request(app)
         .get('/profile')
-        .set('Authorization', `Bearer ${validToken}`);
+        .set('Authorization', `Bearer ${nonExistentUserToken}`);
       
       expect(res.statusCode).toBe(404);
       expect(res.body).toHaveProperty('error', 'User not found');
@@ -167,16 +178,17 @@ describe('User Service', () => {
 
   describe('Update Profile', () => {
     it('should update user profile', async () => {
+      // Reset all previous mocks
+      pool.query.mockReset();
+      
       // Mock DB to update user
-      pool.query
-        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // First check user exists
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 1, 
-            email: 'existing@example.com', 
-            name: 'Updated Name' 
-          }] 
-        }); // Update response
+      pool.query.mockResolvedValueOnce({ 
+        rows: [{ 
+          id: 1, 
+          email: 'test@example.com', 
+          name: 'Updated Name' 
+        }] 
+      }); // Update response
       
       const res = await request(app)
         .put('/profile')
