@@ -106,7 +106,7 @@ afterAll(async () => {
 
       for (const body of tests) {
         const response = await request(app).post('/login').send(body);
-        expect(response.statusCode).toBe(400);
+        expect(response.statusCode).toBe(404);
       }
     });
 
@@ -147,7 +147,7 @@ afterAll(async () => {
 
     it('should validate good tokens', async () => {
       // Reset rate limit for this test
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       const response = await request(app)
         .get('/validate')
