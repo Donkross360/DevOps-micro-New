@@ -7,21 +7,38 @@ class PaymentService {
                 throw new Error('Authentication required');
             }
 
+            // Validate amount before sending to server
+            const parsedAmount = parseInt(amount);
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                throw new Error('Invalid amount. Must be a positive number.');
+            }
+
+            // Validate currency
+            const validCurrencies = ['usd', 'eur', 'gbp', 'cad', 'aud'];
+            if (!validCurrencies.includes(currency.toLowerCase())) {
+                throw new Error(`Invalid currency. Supported currencies: ${validCurrencies.join(', ').toUpperCase()}`);
+            }
+
+            console.log(`Creating payment intent: amount=${parsedAmount}, currency=${currency}`);
+
             const response = await fetch(`${window.BACKEND_URL}/api/payments/create-intent`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-access-token': token
                 },
-                body: JSON.stringify({ amount, currency })
+                body: JSON.stringify({ amount: parsedAmount, currency })
             });
 
+            const data = await response.json();
+            
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create payment intent');
+                console.error('Payment intent creation failed:', data);
+                throw new Error(data.error || 'Failed to create payment intent');
             }
             
-            return await response.json();
+            console.log('Payment intent created successfully');
+            return data;
         } catch (error) {
             console.error('Payment error:', error);
             throw error;

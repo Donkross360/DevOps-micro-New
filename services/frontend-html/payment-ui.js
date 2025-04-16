@@ -45,6 +45,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Show error to customer
                 showStatus(result.error.message, 'error');
                 document.getElementById('card-errors').textContent = result.error.message;
+                
+                // Log the error for debugging
+                console.error('Payment processing error:', result.error);
+                
+                // Provide more helpful guidance based on error type
+                if (result.error.type === 'card_error') {
+                    document.getElementById('card-errors').innerHTML += '<br>Please check your card details and try again.';
+                } else if (result.error.type === 'validation_error') {
+                    document.getElementById('card-errors').innerHTML += '<br>Please check the form fields and try again.';
+                }
             } else {
                 // The payment succeeded!
                 if (result.paymentIntent.status === 'succeeded') {
@@ -54,11 +64,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     form.classList.add('hidden');
                     document.getElementById('card-errors').textContent = '';
                     
+                    // Log successful payment
+                    console.log('Payment succeeded:', result.paymentIntent);
+                    
                     // Load payment history
                     loadPaymentHistory();
+                } else if (result.paymentIntent.status === 'requires_action') {
+                    // Payment requires additional authentication
+                    showStatus('Additional authentication required. Please follow the instructions.', 'warning');
                 } else {
-                    // Payment requires additional action
+                    // Other payment status
                     showStatus(`Payment status: ${result.paymentIntent.status}. Additional action may be required.`, 'warning');
+                    console.log('Payment in non-final state:', result.paymentIntent);
                 }
             }
         } catch (error) {

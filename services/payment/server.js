@@ -59,11 +59,32 @@ const verifyToken = (req, res, next) => {
   
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    
+    // Extract user information
+    req.user = {
+      id: decoded.id || decoded.userId || decoded.sub,
+      email: decoded.email,
+      role: decoded.role || 'user',
+      // Add timestamp for logging/debugging
+      tokenIssued: decoded.iat ? new Date(decoded.iat * 1000).toISOString() : undefined,
+      tokenExpires: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
+    };
+    
+    // Log access for audit purposes
+    logger.info(`Authenticated access: user=${req.user.id}, endpoint=${req.method} ${req.path}`);
+    
     next();
   } catch (err) {
-    logger.error('Token verification failed:', err);
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    if (err.name === 'TokenExpiredError') {
+      logger.warn(`Token expired: ${err.message}`);
+      return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    } else if (err.name === 'JsonWebTokenError') {
+      logger.warn(`Invalid token: ${err.message}`);
+      return res.status(403).json({ error: 'Invalid token', code: 'INVALID_TOKEN' });
+    } else {
+      logger.error('Token verification failed:', err);
+      return res.status(403).json({ error: 'Authentication failed', code: 'AUTH_FAILED' });
+    }
   }
 };
 
@@ -78,41 +99,82 @@ app.post('/create-payment-intent', verifyToken, async (req, res) => {
     const { amount, currency } = req.body;
     
     // Validate input
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: 'Invalid amount' });
+    if (!amount) {
+      return res.status(400).json({ error: 'Amount is required', code: 'MISSING_AMOUNT' });
+    }
+    
+    const parsedAmount = parseInt(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid amount. Must be a positive number', code: 'INVALID_AMOUNT' });
     }
     
     if (!currency) {
-      return res.status(400).json({ error: 'Currency is required' });
+      return res.status(400).json({ error: 'Currency is required', code: 'MISSING_CURRENCY' });
     }
     
     // Validate currency
     const validCurrencies = ['usd', 'eur', 'gbp', 'cad', 'aud'];
     if (!validCurrencies.includes(currency.toLowerCase())) {
-      return res.status(400).json({ error: 'Invalid currency. Supported currencies: USD, EUR, GBP, CAD, AUD' });
+      return res.status(400).json({ 
+        error: 'Invalid currency. Supported currencies: USD, EUR, GBP, CAD, AUD',
+        code: 'INVALID_CURRENCY',
+        supportedCurrencies: validCurrencies
+      });
     }
 
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: process.env.NODE_ENV === 'test' ? 1000 : parseInt(amount),
+      amount: process.env.NODE_ENV === 'test' ? 1000 : parsedAmount,
       currency: process.env.NODE_ENV === 'test' ? 'usd' : currency.toLowerCase(),
       metadata: { 
         userId: req.user.id,
-        userEmail: req.user.email || 'unknown'
+        userEmail: req.user.email || 'unknown',
+        createdAt: new Date().toISOString()
       }
     });
 
     // Store payment intent in database
-    await pool.query(
-      'INSERT INTO payments (user_id, amount, currency, status, payment_id) VALUES ($1, $2, $3, $4, $5)',
-      [req.user.id, amount, currency, 'pending', paymentIntent.id]
+    const result = await pool.query(
+      'INSERT INTO payments (user_id, amount, currency, status, payment_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [req.user.id, parsedAmount, currency.toLowerCase(), 'pending', paymentIntent.id]
     );
 
+    const paymentId = result.rows[0].id;
+    
+    // Log successful payment intent creation
+    logger.info(`Payment intent created: id=${paymentIntent.id}, user=${req.user.id}, amount=${parsedAmount}, currency=${currency}`);
+
     // Send client secret to client
-    res.json({ clientSecret: paymentIntent.client_secret });
+    res.json({ 
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      paymentId: paymentId
+    });
   } catch (error) {
+    // Handle Stripe-specific errors
+    if (error.type && error.type.startsWith('Stripe')) {
+      logger.error(`Stripe error creating payment intent: ${error.type} - ${error.message}`);
+      return res.status(400).json({ 
+        error: error.message,
+        code: error.code || 'STRIPE_ERROR'
+      });
+    }
+    
+    // Handle database errors
+    if (error.code && error.code.startsWith('23')) { // PostgreSQL error codes
+      logger.error(`Database error creating payment record: ${error.code} - ${error.message}`);
+      return res.status(500).json({ 
+        error: 'Database error while processing payment',
+        code: 'DB_ERROR'
+      });
+    }
+    
+    // Generic error handling
     logger.error('Error creating payment intent:', error);
-    res.status(500).json({ error: 'Failed to create payment' });
+    res.status(500).json({ 
+      error: 'Failed to create payment',
+      code: 'PAYMENT_CREATION_FAILED'
+    });
   }
 });
 

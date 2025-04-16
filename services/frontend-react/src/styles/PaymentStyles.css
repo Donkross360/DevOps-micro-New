@@ -1,0 +1,146 @@
+/* Payment Page Styles */
+.payment-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.back-button {
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.back-button:hover {
+  background-color: #e0e0e0;
+}
+
+.payment-form-container {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.card-element-container {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.payment-button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.payment-button:hover {
+  background-color: #45a049;
+}
+
+.payment-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #d32f2f;
+  background-color: #ffebee;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+}
+
+.payment-success {
+  background-color: #e8f5e9;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.payment-success h2 {
+  color: #2e7d32;
+  margin-bottom: 15px;
+}
+
+.payment-history {
+  margin-top: 40px;
+}
+
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.payments-table th,
+.payments-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.payments-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.status-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-warning {
+  background-color: #fff8e1;
+  color: #f57f17;
+}
+
+.status-error {
+  background-color: #ffebee;
+  color: #c62828;
+}

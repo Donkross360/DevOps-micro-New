@@ -74,12 +74,25 @@ function createApp() {
     try {
       const { amount, currency } = req.body;
       
+      // Basic validation before forwarding
+      if (!amount) {
+        return res.status(400).json({ error: 'Amount is required', code: 'MISSING_AMOUNT' });
+      }
+      
+      if (!currency) {
+        return res.status(400).json({ error: 'Currency is required', code: 'MISSING_CURRENCY' });
+      }
+      
+      logger.info(`Payment intent request: amount=${amount}, currency=${currency}, user=${req.user?.id || 'unknown'}`);
+      
       // Forward the request to the payment service
       const response = await fetch(`${process.env.PAYMENT_SERVICE_URL || 'http://payment:7000'}/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${req.headers['x-access-token']}`
+          'Authorization': `Bearer ${req.headers['x-access-token']}`,
+          'X-Request-ID': req.headers['x-request-id'] || Date.now().toString(),
+          'X-Forwarded-For': req.ip
         },
         body: JSON.stringify({ amount, currency })
       });
@@ -87,13 +100,35 @@ function createApp() {
       const data = await response.json();
       
       if (!response.ok) {
+        logger.warn(`Payment service error: ${response.status} - ${data.error || 'Unknown error'}`);
         return res.status(response.status).json(data);
       }
       
+      logger.info(`Payment intent created: ${data.paymentIntentId || 'unknown'}`);
       res.json(data);
     } catch (error) {
       logger.error('Payment proxy error:', error);
-      res.status(500).json({ error: 'Failed to process payment request' });
+      
+      // Provide more specific error messages based on the error type
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        return res.status(503).json({ 
+          error: 'Payment service unavailable', 
+          code: 'SERVICE_UNAVAILABLE',
+          retryAfter: 30 // Suggest retry after 30 seconds
+        });
+      }
+      
+      if (error.type === 'system') {
+        return res.status(500).json({ 
+          error: 'System error processing payment', 
+          code: 'SYSTEM_ERROR' 
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Failed to process payment request',
+        code: 'PAYMENT_PROXY_ERROR'
+      });
     }
   });
 
