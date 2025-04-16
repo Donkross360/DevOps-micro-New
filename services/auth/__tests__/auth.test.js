@@ -126,7 +126,9 @@ describe('Auth Service', () => {
   describe('Security Features', () => {
     it('should include security headers', async () => {
       const response = await request(app).get('/health');
-      expect(response.headers).toHaveProperty('x-powered-by', 'Express');
+      expect(response.headers).toHaveProperty('content-security-policy');
+      expect(response.headers).toHaveProperty('x-content-type-options');
+      expect(response.headers).toHaveProperty('x-frame-options');
     });
 
     it('should have rate limiting middleware', () => {
