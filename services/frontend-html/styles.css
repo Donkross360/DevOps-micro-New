@@ -21,6 +21,12 @@ body {
     border: 1px solid #c3e6cb;
 }
 
+.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
 .error {
     background-color: #f8d7da;
     color: #721c24;
@@ -94,6 +100,28 @@ table tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
+.status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.details-btn {
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.details-btn:hover {
+    background-color: #e0e0e0;
+}
+
 #payment-success {
     background-color: #d4edda;
     padding: 15px;
@@ -108,4 +136,22 @@ a {
 
 a:hover {
     text-decoration: underline;
+}
+
+.header-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.back-link {
+    font-size: 14px;
+    padding: 5px 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.back-link:hover {
+    background-color: #e9ecef;
 }

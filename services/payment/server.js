@@ -54,14 +54,17 @@ app.use((req, res, next) => {
 
 // Authentication middleware
 const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+  const token = req.headers.authorization?.split(' ')[1] || req.headers['x-access-token'];
+  if (!token) return res.status(401).json({ error: 'Authentication required' });
   
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.sendStatus(403);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
-  });
+  } catch (err) {
+    logger.error('Token verification failed:', err);
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
 };
 
 // Health check endpoint
@@ -83,11 +86,20 @@ app.post('/create-payment-intent', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Currency is required' });
     }
     
+    // Validate currency
+    const validCurrencies = ['usd', 'eur', 'gbp', 'cad', 'aud'];
+    if (!validCurrencies.includes(currency.toLowerCase())) {
+      return res.status(400).json({ error: 'Invalid currency. Supported currencies: USD, EUR, GBP, CAD, AUD' });
+    }
+
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
       amount: process.env.NODE_ENV === 'test' ? 1000 : parseInt(amount),
-      currency: process.env.NODE_ENV === 'test' ? 'usd' : currency,
-      metadata: { userId: req.user.id }
+      currency: process.env.NODE_ENV === 'test' ? 'usd' : currency.toLowerCase(),
+      metadata: { 
+        userId: req.user.id,
+        userEmail: req.user.email || 'unknown'
+      }
     });
 
     // Store payment intent in database
@@ -178,17 +190,47 @@ app.post('/webhook', async (req, res) => {
       }
     }
     
-    // Handle the event
-    if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object;
-      
-      // Update payment status in database
-      await pool.query(
-        'UPDATE payments SET status = $1 WHERE payment_id = $2',
-        ['completed', paymentIntent.id]
-      );
-      
-      logger.info(`PaymentIntent ${paymentIntent.id} succeeded`);
+    // Handle the event based on type
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        
+        // Update payment status in database
+        await pool.query(
+          'UPDATE payments SET status = $1 WHERE payment_id = $2',
+          ['completed', paymentIntent.id]
+        );
+        
+        logger.info(`PaymentIntent ${paymentIntent.id} succeeded`);
+        break;
+        
+      case 'payment_intent.payment_failed':
+        const failedPayment = event.data.object;
+        
+        // Update payment status in database
+        await pool.query(
+          'UPDATE payments SET status = $1 WHERE payment_id = $2',
+          ['failed', failedPayment.id]
+        );
+        
+        logger.error(`PaymentIntent ${failedPayment.id} failed: ${failedPayment.last_payment_error?.message || 'Unknown error'}`);
+        break;
+        
+      case 'charge.refunded':
+        const refund = event.data.object;
+        
+        // Update payment status for the refunded charge
+        await pool.query(
+          'UPDATE payments SET status = $1 WHERE payment_id = $2',
+          ['refunded', refund.payment_intent]
+        );
+        
+        logger.info(`Charge ${refund.id} refunded for payment ${refund.payment_intent}`);
+        break;
+        
+      default:
+        // Log unhandled event types
+        logger.info(`Unhandled event type: ${event.type}`);
     }
     
     res.json({ received: true });

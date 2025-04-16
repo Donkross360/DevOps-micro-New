@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (result.error) {
                 // Show error to customer
                 showStatus(result.error.message, 'error');
+                document.getElementById('card-errors').textContent = result.error.message;
             } else {
                 // The payment succeeded!
                 if (result.paymentIntent.status === 'succeeded') {
@@ -51,9 +52,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('payment-id').textContent = result.paymentIntent.id;
                     document.getElementById('payment-success').classList.remove('hidden');
                     form.classList.add('hidden');
+                    document.getElementById('card-errors').textContent = '';
                     
                     // Load payment history
                     loadPaymentHistory();
+                } else {
+                    // Payment requires additional action
+                    showStatus(`Payment status: ${result.paymentIntent.status}. Additional action may be required.`, 'warning');
                 }
             }
         } catch (error) {
@@ -81,14 +86,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 payments.forEach(payment => {
                     const row = document.createElement('tr');
+                    
+                    // Format status with appropriate styling
+                    let statusClass = '';
+                    switch(payment.status) {
+                        case 'completed':
+                            statusClass = 'success';
+                            break;
+                        case 'pending':
+                            statusClass = 'warning';
+                            break;
+                        case 'failed':
+                            statusClass = 'error';
+                            break;
+                        default:
+                            statusClass = '';
+                    }
+                    
                     row.innerHTML = `
                         <td>${payment.id}</td>
                         <td>${(payment.amount / 100).toFixed(2)}</td>
                         <td>${payment.currency.toUpperCase()}</td>
-                        <td>${payment.status}</td>
+                        <td><span class="status-badge ${statusClass}">${payment.status}</span></td>
                         <td>${new Date(payment.created_at).toLocaleString()}</td>
+                        <td>
+                            <button class="details-btn" data-id="${payment.id}">Details</button>
+                        </td>
                     `;
                     tableBody.appendChild(row);
+                });
+                
+                // Add event listeners to details buttons
+                document.querySelectorAll('.details-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const paymentId = btn.getAttribute('data-id');
+                        try {
+                            const paymentDetails = await PaymentService.getPaymentDetails(paymentId);
+                            alert(`Payment ID: ${paymentDetails.id}\nAmount: ${(paymentDetails.amount / 100).toFixed(2)} ${paymentDetails.currency.toUpperCase()}\nStatus: ${paymentDetails.status}\nDate: ${new Date(paymentDetails.created_at).toLocaleString()}`);
+                        } catch (error) {
+                            console.error('Error fetching payment details:', error);
+                            alert('Failed to load payment details');
+                        }
+                    });
                 });
                 
                 document.getElementById('payment-history').classList.remove('hidden');
