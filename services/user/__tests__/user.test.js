@@ -7,6 +7,7 @@ const { createServer } = require('../server');
 jest.mock('express-rate-limit', () => jest.fn(() => (req, res, next) => next()));
 jest.mock('../db', () => ({
   query: jest.fn()
+    .mockResolvedValueOnce({ rows: [] }) // For checking if user exists
     .mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@example.com', name: 'Test User' }] }) // For registration
     .mockResolvedValue({ rows: [] }), // Default
   end: jest.fn().mockResolvedValue(true)
@@ -67,7 +68,8 @@ describe('User Service', () => {
       pool.query
         .mockResolvedValueOnce({ rows: [] }) // First check if user exists
         .mockResolvedValueOnce({ rows: [] }) // Second check (if needed)
-        .mockResolvedValueOnce({ 
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // First check user exists
+        .mockResolvedValueOnce({
           rows: [{ id: 1, email: 'test@example.com', name: 'Test User' }] 
         }); // Insert response
       
@@ -102,7 +104,7 @@ describe('User Service', () => {
     
     it('should return 409 if user already exists', async () => {
       // Mock DB to return existing user
-      pool.query.mockResolvedValue({ 
+      pool.query.mockResolvedValueOnce({ 
         rows: [{ id: 1, email: 'existing@example.com' }] 
       });
       
@@ -151,7 +153,7 @@ describe('User Service', () => {
       // Mock DB to return no user
       pool.query.mockResolvedValueOnce({ rows: [] });
       // Mock token verification to return a user ID that doesn't exist
-      jwt.verify.mockImplementation(() => ({ id: 999 }));
+      jest.spyOn(jwt, 'verify').mockImplementation(() => ({ id: 999 }));
       
       const res = await request(app)
         .get('/profile')
