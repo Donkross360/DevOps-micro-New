@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const fetch = require('node-fetch');
 const pool = require('./db');
 
 const winston = require('winston');
@@ -66,6 +67,106 @@ function createApp() {
   // Health check endpoint
   app.get('/health', (req, res) => {
     res.status(200).send('OK');
+  });
+
+  // Payment endpoints - proxy to payment service
+  app.post('/api/payments/create-intent', verifyToken, async (req, res) => {
+    try {
+      const { amount, currency } = req.body;
+      
+      // Forward the request to the payment service
+      const response = await fetch(`${process.env.PAYMENT_SERVICE_URL || 'http://payment:7000'}/create-payment-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${req.headers['x-access-token']}`
+        },
+        body: JSON.stringify({ amount, currency })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      logger.error('Payment proxy error:', error);
+      res.status(500).json({ error: 'Failed to process payment request' });
+    }
+  });
+
+  app.get('/api/payments/:id', verifyToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Forward the request to the payment service
+      const response = await fetch(`${process.env.PAYMENT_SERVICE_URL || 'http://payment:7000'}/payments/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${req.headers['x-access-token']}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      logger.error('Payment fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch payment details' });
+    }
+  });
+
+  app.get('/api/payments', verifyToken, async (req, res) => {
+    try {
+      // Forward the request to the payment service
+      const response = await fetch(`${process.env.PAYMENT_SERVICE_URL || 'http://payment:7000'}/user/payments`, {
+        headers: {
+          'Authorization': `Bearer ${req.headers['x-access-token']}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      logger.error('Payments fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch user payments' });
+    }
+  });
+
+  // Webhook endpoint - proxy to payment service
+  app.post('/api/payments/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+    try {
+      // Forward the webhook to the payment service
+      const response = await fetch(`${process.env.PAYMENT_SERVICE_URL || 'http://payment:7000'}/webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'stripe-signature': req.headers['stripe-signature']
+        },
+        body: req.body
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      logger.error('Webhook proxy error:', error);
+      res.status(500).json({ error: 'Failed to process webhook' });
+    }
   });
 
   return app;
