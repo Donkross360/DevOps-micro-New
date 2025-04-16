@@ -49,15 +49,13 @@ services:
     environment:
       - SSL_CERT=/certs/cert.pem
       - SSL_KEY=/certs/key.pem
-    volumes:
-      - ./certs:/certs
-    environment:
       - NODE_ENV=${NODE_ENV}
       - JWT_SECRET=${JWT_SECRET}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB}
+      - PAYMENT_SERVICE_URL=http://payment:7000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
