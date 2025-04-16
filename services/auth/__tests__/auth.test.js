@@ -1,17 +1,10 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const { createServer } = require('../server');
-const pool = require('../db');
-
-// Mock database and users
-jest.mock('pg', () => {
-  return {
-    Pool: jest.fn(() => ({
-      query: jest.fn().mockResolvedValue({ rows: [] }),
-      end: jest.fn().mockResolvedValue(true)
-    }))
-  };
-});
+jest.mock('../db', () => ({
+  query: jest.fn().mockResolvedValue({ rows: [] }),
+  end: jest.fn().mockResolvedValue(true)
+}));
 
 const mockUsers = {
   'admin@example.com': {

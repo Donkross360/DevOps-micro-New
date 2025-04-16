@@ -1,5 +1,8 @@
 const request = require('supertest');
-const app = require('../server'); // Assuming server.js exports the app
+jest.mock('../db', () => ({
+  query: jest.fn().mockResolvedValue({ rows: [] }),
+  end: jest.fn().mockResolvedValue(true)
+}));
 
 describe('Payment Service', () => {
   it('should process payment successfully', async () => {

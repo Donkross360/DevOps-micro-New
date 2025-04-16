@@ -1,22 +1,17 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../server');
-const pool = require('../db');
+jest.mock('../db', () => ({
+  query: jest.fn().mockResolvedValue({ rows: [{ count: '1' }] }),
+  end: jest.fn().mockResolvedValue(true)
+}));
 
 describe('Backend Service', () => {
   let validToken;
   
-  beforeAll(async () => {
+  beforeAll(() => {
     // Setup test data
     validToken = jwt.sign({ id: 1 }, process.env.JWT_SECRET || 'test-secret');
-    await pool.query('CREATE TABLE IF NOT EXISTS test_data (id SERIAL PRIMARY KEY, value TEXT)');
-    await pool.query("INSERT INTO test_data (value) VALUES ('test')");
-  });
-
-  afterAll(async () => {
-    // Cleanup
-    await pool.query('DROP TABLE IF EXISTS test_data');
-    await pool.end();
   });
 
   describe('Health Check', () => {
