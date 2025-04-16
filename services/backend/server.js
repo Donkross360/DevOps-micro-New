@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const fetch = require('node-fetch');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const pool = require('./db');
 
 const winston = require('winston');
