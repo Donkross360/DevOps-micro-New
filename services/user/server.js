@@ -68,7 +68,25 @@ app.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
+function createServer() {
+  const app = express();
+  const server = app.listen(process.env.PORT || 0);
+  
+  // Verify DB connection on startup
+  pool.query('SELECT 1')
+    .then(() => console.log('Database connected'))
+    .catch(err => console.error('Database connection error', err));
+
+  return { app, server };
+}
+
 const PORT = process.env.PORT || 6000;
-app.listen(PORT, () => {
-  console.log(`User service running on port ${PORT}`);
-});
+const { app, server } = createServer();
+
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`User service running on port ${PORT}`);
+  });
+}
+
+module.exports = { createServer, app, server };
