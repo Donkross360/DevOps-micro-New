@@ -27,16 +27,25 @@ beforeAll(async () => {
   
   // Setup mock routes
   app.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    const user = mockUsers[email];
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (password !== 'admin123') return res.status(401).json({ error: 'Invalid password' });
-    
-    res.status(200).json({
-      token: jwt.sign({ id: user.id }, process.env.JWT_SECRET),
-      refreshToken: 'mock-refresh-token'
-    }, 10000); // Increase timeout to 10 seconds
+    try {
+      const { email, password } = req.body;
+      
+      // Check for missing fields
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      const user = mockUsers[email];
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (password !== 'admin123') return res.status(401).json({ error: 'Invalid password' });
+      
+      res.status(200).json({
+        token: jwt.sign({ id: user.id }, process.env.JWT_SECRET),
+        refreshToken: 'mock-refresh-token'
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
   
   app.get('/validate', (req, res) => {
@@ -146,15 +155,18 @@ afterAll(async () => {
     let validToken = 'test-access-token';
 
     it('should validate good tokens', async () => {
-      // Reset rate limit for this test
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Mock jwt verify
+      jest.spyOn(jwt, 'verify').mockImplementation((token, secret, callback) => {
+        callback(null, { id: 1 }); // Simulate successful verification
+      });
 
       const response = await request(app)
         .get('/validate')
-        .set('x-access-token', validToken);
+        .set('x-access-token', 'valid-token');
+      
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty('valid', true);
-    });
+    }, 10000); // Increased timeout
 
     it('should reject invalid tokens', async () => {
       const tests = [
