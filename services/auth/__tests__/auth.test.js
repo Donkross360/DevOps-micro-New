@@ -33,7 +33,7 @@ beforeAll(async () => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (password !== 'admin123') return res.status(401).json({ error: 'Invalid password' });
     
-    res.json({
+    res.status(200).json({
       token: jwt.sign({ id: user.id }, process.env.JWT_SECRET),
       refreshToken: 'mock-refresh-token'
     }, 10000); // Increase timeout to 10 seconds
