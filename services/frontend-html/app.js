@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const password = document.getElementById('password').value;
 
         try {
-            await AuthService.login(username, password);
+            await AuthService.login(email, password);
             showProtectedContent();
             fetchProtectedData();
             usernameDisplay.textContent = email.split('@')[0]; // Show name before @

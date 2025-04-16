@@ -1,17 +1,53 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const app = require('../server');
-jest.mock('../db', () => ({
-  query: jest.fn().mockResolvedValue({ rows: [{ count: '1' }] }),
-  end: jest.fn().mockResolvedValue(true)
+const express = require('express');
+const { Pool } = require('pg');
+
+// Mock the database
+jest.mock('pg', () => {
+  const mPool = {
+    query: jest.fn().mockResolvedValue({ 
+      rows: [{ count: '1' }],
+      rowCount: 1
+    }),
+    end: jest.fn().mockResolvedValue(true)
+  };
+  return { Pool: jest.fn(() => mPool) };
+});
+
+// Mock winston logger
+jest.mock('winston', () => ({
+  format: {
+    json: jest.fn(),
+    combine: jest.fn(),
+    timestamp: jest.fn(),
+    printf: jest.fn()
+  },
+  createLogger: jest.fn().mockReturnValue({
+    info: jest.fn(),
+    error: jest.fn()
+  }),
+  transports: {
+    Console: jest.fn(),
+    File: jest.fn()
+  }
 }));
+
+// Import the server after mocking dependencies
+const app = require('../server');
+const pool = new Pool();
 
 describe('Backend Service', () => {
   let validToken;
   
   beforeAll(() => {
     // Setup test data
-    validToken = jwt.sign({ id: 1 }, process.env.JWT_SECRET || 'test-secret');
+    process.env.JWT_SECRET = 'test-secret';
+    validToken = jwt.sign({ id: 1 }, process.env.JWT_SECRET);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('Health Check', () => {
@@ -26,6 +62,7 @@ describe('Backend Service', () => {
     it('should return 403 without token', async () => {
       const res = await request(app).get('/api/data');
       expect(res.statusCode).toBe(403);
+      expect(res.text).toBe('No token');
     });
 
     it('should return 403 with invalid token', async () => {
@@ -33,6 +70,7 @@ describe('Backend Service', () => {
         .get('/api/data')
         .set('x-access-token', 'invalid-token');
       expect(res.statusCode).toBe(403);
+      expect(res.text).toBe('Invalid token');
     });
 
     it('should return 200 with valid token', async () => {
@@ -40,14 +78,49 @@ describe('Backend Service', () => {
         .get('/api/data')
         .set('x-access-token', validToken);
       expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty('message');
+      expect(res.body).toHaveProperty('message', 'Protected data');
     });
   });
 
-  describe('Database Integration', () => {
-    it('should maintain DB connection', async () => {
-      const res = await pool.query('SELECT * FROM test_data');
-      expect(res.rows.length).toBeGreaterThan(0);
+  describe('Dashboard Endpoint', () => {
+    it('should return dashboard data with valid token', async () => {
+      // Setup mock responses for the dashboard queries
+      pool.query
+        .mockResolvedValueOnce({ rows: [{ count: '5' }] })  // userCount
+        .mockResolvedValueOnce({ rows: [{ count: '10' }] }); // paymentCount
+      
+      const res = await request(app)
+        .get('/api/dashboard')
+        .set('x-access-token', validToken);
+      
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toHaveProperty('userCount', '5');
+      expect(res.body).toHaveProperty('paymentCount', '10');
+      expect(res.body).toHaveProperty('message', 'Dashboard data');
+      
+      // Verify the queries were called
+      expect(pool.query).toHaveBeenCalledTimes(2);
+      expect(pool.query).toHaveBeenCalledWith('SELECT COUNT(*) FROM users');
+      expect(pool.query).toHaveBeenCalledWith('SELECT COUNT(*) FROM payments');
+    });
+    
+    it('should handle database errors', async () => {
+      // Setup mock to throw an error
+      pool.query.mockRejectedValueOnce(new Error('Database error'));
+      
+      const res = await request(app)
+        .get('/api/dashboard')
+        .set('x-access-token', validToken);
+      
+      expect(res.statusCode).toBe(500);
+      expect(res.body).toHaveProperty('error', 'Failed to fetch dashboard data');
+    });
+  });
+
+  describe('Database Connection', () => {
+    it('should verify database connection on startup', async () => {
+      // This test verifies that the server attempts to connect to the database
+      expect(pool.query).toHaveBeenCalledWith('SELECT 1');
     });
   });
 });

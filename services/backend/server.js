@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const { Pool } = require('pg');
+const pool = require('./db');
 
 const app = express();
 const winston = require('winston');
@@ -25,14 +25,6 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(cors());
-
-const pool = new Pool({
-  user: process.env.POSTGRES_USER,
-  host: 'db',
-  database: 'postgres',
-  password: process.env.POSTGRES_PASSWORD,
-  port: 5432,
-});
 
 // Basic token verification
 const verifyToken = (req, res, next) => {
