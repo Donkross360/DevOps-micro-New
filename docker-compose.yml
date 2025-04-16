@@ -98,8 +98,21 @@ services:
       - "6000:6000"
     environment:
       - NODE_ENV=development
+      - JWT_SECRET=${JWT_SECRET}
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     volumes:
       - ./user:/app
+    depends_on:
+      db:
+        condition: service_healthy
 
   payment:
     image: payment:latest
@@ -107,8 +120,22 @@ services:
       - "7000:7000"
     environment:
       - NODE_ENV=development
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     volumes:
       - ./payment:/app
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     build: ./services/db
@@ -134,3 +161,5 @@ networks:
     driver: bridge
     name: app_network
     attachable: true
+    # Internal network for production-like isolation
+    internal: ${INTERNAL_NETWORK:-false}
