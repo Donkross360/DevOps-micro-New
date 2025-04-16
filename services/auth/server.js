@@ -81,18 +81,26 @@ app.post('/login', async (req, res, next) => {
   }
 });
 
+// Add health check endpoint for testing
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 app.get('/validate', (req, res) => {
   const token = req.headers['x-access-token'];
-  if (!token) return res.status(403).send('No token provided');
+  if (!token) return res.status(403).json({ error: 'No token provided' });
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(500).send('Failed to authenticate token');
+    if (err) return res.status(403).json({ error: 'Invalid token' });
+    
     const user = Array.from(users.values()).find(u => u.id === decoded.id);
-    res.status(200).send({ 
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    res.status(200).json({ 
       valid: true, 
       userId: decoded.id,
-      email: decoded.email,
-      name: user?.name || ''
+      email: Object.keys(users).find(k => users[k].id === decoded.id),
+      name: user.name
     });
   });
 });
