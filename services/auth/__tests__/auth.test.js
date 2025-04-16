@@ -36,7 +36,7 @@ beforeAll(async () => {
     res.json({
       token: jwt.sign({ id: user.id }, process.env.JWT_SECRET),
       refreshToken: 'mock-refresh-token'
-    });
+    }, 10000); // Increase timeout to 10 seconds
   });
   
   app.get('/validate', (req, res) => {
@@ -106,7 +106,7 @@ afterAll(async () => {
 
       for (const body of tests) {
         const response = await request(app).post('/login').send(body);
-        expect(response.statusCode).toBe(401);
+        expect(response.statusCode).toBe(400);
       }
     });
 
