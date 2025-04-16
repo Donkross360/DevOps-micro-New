@@ -92,7 +92,7 @@ app.post('/create-payment-intent', verifyToken, async (req, res) => {
         client_secret: 'secret_test123'
       };
       // Ensure the mock is called for test verification
-      stripe.paymentIntents.create({
+      await stripe.paymentIntents.create({
         amount: 1000,
         currency: 'usd',
         metadata: { userId: 1 }
