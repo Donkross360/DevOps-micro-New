@@ -12,152 +12,176 @@ jest.mock('../db', () => ({
   end: jest.fn().mockResolvedValue(true)
 }));
 
-const mockUsers = {
-  'test@example.com': {
-    id: 1,
-    password: bcrypt.hashSync('test123', 8),
-    name: 'Test User'
+// Mock winston logger
+jest.mock('winston', () => ({
+  format: {
+    json: jest.fn(),
+    combine: jest.fn(),
+    timestamp: jest.fn(),
+    printf: jest.fn()
+  },
+  createLogger: jest.fn().mockReturnValue({
+    info: jest.fn(),
+    error: jest.fn()
+  }),
+  transports: {
+    Console: jest.fn(),
+    File: jest.fn()
   }
-};
+}));
 
-let app, server;
+// Set environment variables for testing
+process.env.JWT_SECRET = 'test-secret';
+process.env.NODE_ENV = 'test';
 
-beforeAll(async () => {
-  process.env.JWT_SECRET = 'test-secret';
-  
-  // Mock bcrypt compare
-  jest.spyOn(bcrypt, 'compare').mockImplementation((plain, hash) => 
-    Promise.resolve(plain === 'test123' && hash === mockUsers['test@example.com'].password)
-  );
-
-  const testServer = createServer();
-  app = testServer.app;
-  server = testServer.server;
-  
-  // Override the real routes with our test routes
-  app.post('/register', (req, res) => {
-    const { email, password, name } = req.body;
-    
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'All fields are required' });
-    }
-
-    if (mockUsers[email]) {
-      return res.status(409).json({ error: 'User already exists' });
-    }
-
-    res.status(201).json({
-      id: 1,
-      email,
-      name
-    });
-  });
-
-  app.get('/users', (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
-    
-    jwt.verify(token, process.env.JWT_SECRET, (err) => {
-      if (err) return res.sendStatus(403);
-      res.json([mockUsers['test@example.com']]);
-    });
-  });
-
-  app.get('/profile', (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
-    
-    jwt.verify(token, process.env.JWT_SECRET, (err) => {
-      if (err) return res.sendStatus(403);
-      res.json(mockUsers['test@example.com']);
-    });
-  });
-});
-
-afterAll(async () => {
-  await new Promise(resolve => server.close(resolve));
-  jest.restoreAllMocks();
-});
+const app = createServer();
+const pool = require('../db');
 
 describe('User Service', () => {
   let validToken;
-
+  
   beforeAll(() => {
+    // Setup test data
     validToken = jwt.sign({ id: 1 }, process.env.JWT_SECRET);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Health Check', () => {
+    it('should return 200', async () => {
+      const res = await request(app).get('/health');
+      expect(res.statusCode).toBe(200);
+      expect(res.text).toBe('OK');
+    });
+  });
+
   describe('Registration', () => {
-    it('should create new user', async () => {
-      const response = await request(app)
-        .post('/register')
-        .send({
-          email: 'new@example.com',
-          password: 'test123',
-          name: 'New User'
-        });
-
-      expect(response.statusCode).toBe(201);
-      expect(response.body).toEqual({
-        id: 1,
-        email: 'new@example.com',
-        name: 'New User'
+    it('should register a new user', async () => {
+      // Mock bcrypt
+      bcrypt.genSalt = jest.fn().mockResolvedValue('salt');
+      bcrypt.hash = jest.fn().mockResolvedValue('hashed_password');
+      
+      // Mock DB to check if user exists
+      pool.query.mockResolvedValueOnce({ rows: [] });
+      
+      // Mock DB to insert user
+      pool.query.mockResolvedValueOnce({ 
+        rows: [{ id: 1, email: 'test@example.com', name: 'Test User' }] 
       });
-    });
-
-    it('should return 400 for missing fields', async () => {
-      const tests = [
-        { email: '', password: 'test123', name: 'Test' },
-        { email: 'test@example.com', password: '', name: 'Test' },
-        { email: 'test@example.com', password: 'test123', name: '' }
-      ];
-
-      for (const body of tests) {
-        const response = await request(app).post('/register').send(body);
-        expect(response.statusCode).toBe(400);
-      }
-    });
-
-    it('should return 409 for existing user', async () => {
-      const response = await request(app)
+      
+      const res = await request(app)
         .post('/register')
-        .send({
-          email: 'test@example.com',
-          password: 'test123',
-          name: 'Test User'
+        .send({ 
+          email: 'test@example.com', 
+          password: 'password123', 
+          name: 'Test User' 
         });
-
-      expect(response.statusCode).toBe(409);
+      
+      expect(res.statusCode).toBe(201);
+      expect(res.body).toHaveProperty('id', 1);
+      expect(res.body).toHaveProperty('email', 'test@example.com');
+      expect(res.body).toHaveProperty('name', 'Test User');
+      
+      // Verify bcrypt was called
+      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 'salt');
+      
+      // Verify DB queries
+      expect(pool.query).toHaveBeenCalledTimes(2);
+    });
+    
+    it('should return 400 for missing credentials', async () => {
+      const res = await request(app)
+        .post('/register')
+        .send({ email: 'test@example.com' }); // Missing password
+      
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toHaveProperty('error', 'Email and password are required');
+    });
+    
+    it('should return 409 if user already exists', async () => {
+      // Mock DB to check if user exists
+      pool.query.mockResolvedValueOnce({ 
+        rows: [{ id: 1, email: 'existing@example.com' }] 
+      });
+      
+      const res = await request(app)
+        .post('/register')
+        .send({ 
+          email: 'existing@example.com', 
+          password: 'password123' 
+        });
+      
+      expect(res.statusCode).toBe(409);
+      expect(res.body).toHaveProperty('error', 'User already exists');
     });
   });
 
-  describe('User Endpoints', () => {
-    it('should return user list for authenticated users', async () => {
-      const response = await request(app)
-        .get('/users')
-        .set('Authorization', `Bearer ${validToken}`);
-
-      expect(response.statusCode).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
-    });
-
-    it('should return 401 for unauthorized access', async () => {
-      const response = await request(app).get('/users');
-      expect(response.statusCode).toBe(401);
-    });
-  });
-
-  describe('Profile Endpoint', () => {
-    it('should return user profile', async () => {
-      const response = await request(app)
+  describe('User Profile', () => {
+    it('should return user profile with valid token', async () => {
+      // Mock DB to return user
+      pool.query.mockResolvedValueOnce({ 
+        rows: [{ 
+          id: 1, 
+          email: 'test@example.com', 
+          name: 'Test User',
+          created_at: new Date().toISOString()
+        }] 
+      });
+      
+      const res = await request(app)
         .get('/profile')
         .set('Authorization', `Bearer ${validToken}`);
+      
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toHaveProperty('id', 1);
+      expect(res.body).toHaveProperty('email', 'test@example.com');
+      expect(res.body).toHaveProperty('name', 'Test User');
+    });
+    
+    it('should return 401 without token', async () => {
+      const res = await request(app).get('/profile');
+      expect(res.statusCode).toBe(401);
+    });
+    
+    it('should return 404 if user not found', async () => {
+      // Mock DB to return no user
+      pool.query.mockResolvedValueOnce({ rows: [] });
+      
+      const res = await request(app)
+        .get('/profile')
+        .set('Authorization', `Bearer ${validToken}`);
+      
+      expect(res.statusCode).toBe(404);
+      expect(res.body).toHaveProperty('error', 'User not found');
+    });
+  });
 
-      expect(response.statusCode).toBe(200);
-      expect(response.body).toEqual({
-        id: 1,
-        email: 'test@example.com',
-        name: 'Test User'
+  describe('Update Profile', () => {
+    it('should update user profile', async () => {
+      // Mock DB to update user
+      pool.query.mockResolvedValueOnce({ 
+        rows: [{ 
+          id: 1, 
+          email: 'test@example.com', 
+          name: 'Updated Name' 
+        }] 
       });
+      
+      const res = await request(app)
+        .put('/profile')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: 'Updated Name' });
+      
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toHaveProperty('name', 'Updated Name');
+      
+      // Verify DB query
+      expect(pool.query).toHaveBeenCalledWith(
+        'UPDATE users SET name = $1 WHERE id = $2 RETURNING id, email, name',
+        ['Updated Name', 1]
+      );
     });
   });
 });
