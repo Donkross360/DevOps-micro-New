@@ -52,6 +52,23 @@ app.get('/api/data', verifyToken, (req, res) => {
   res.json({ message: 'Protected data' });
 });
 
+// Dashboard endpoint
+app.get('/api/dashboard', verifyToken, async (req, res) => {
+  try {
+    // Example: Fetch some aggregated data
+    const userCount = await pool.query('SELECT COUNT(*) FROM users');
+    const paymentCount = await pool.query('SELECT COUNT(*) FROM payments');
+    
+    res.json({
+      userCount: userCount.rows[0].count,
+      paymentCount: paymentCount.rows[0].count,
+      message: 'Dashboard data'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
