@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function fetchProtectedData() {
         try {
-            const response = await fetch(`${BACKEND_URL}/api/data`, {
+            const response = await fetch(`${window.BACKEND_URL}/api/data`, {
                 headers: {
                     'x-access-token': AuthService.getToken()
                 }

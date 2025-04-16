@@ -1,5 +1,6 @@
-const API_BASE_URL = process.env.API_URL || 'http://localhost:4000';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+// Get API URLs from environment or use defaults
+const API_BASE_URL = window.API_BASE_URL || 'http://localhost:4000';
+const BACKEND_URL = window.BACKEND_URL || 'http://localhost:5000';
 
 class AuthService {
     static async login(email, password) {
