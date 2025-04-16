@@ -1,7 +1,16 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../server');
-const pool = require('../db');
+const { Pool } = require('pg');
+
+// Create a test-specific database connection
+const pool = new Pool({
+  user: process.env.POSTGRES_USER || 'postgres',
+  host: process.env.POSTGRES_HOST || 'localhost',
+  database: process.env.POSTGRES_DB || 'postgres_test',
+  password: process.env.POSTGRES_PASSWORD || 'postgres',
+  port: process.env.POSTGRES_PORT || 5432,
+});
 
 describe('Auth Service', () => {
   beforeAll(async () => {
@@ -17,8 +26,16 @@ describe('Auth Service', () => {
   });
 
   afterAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS refresh_tokens');
-    await pool.end();
+    try {
+      await pool.query('DROP TABLE IF EXISTS refresh_tokens');
+      await pool.end();
+      // Close the server if needed
+      if (app.server) {
+        await new Promise(resolve => app.server.close(resolve));
+      }
+    } catch (err) {
+      console.error('Cleanup error:', err);
+    }
   });
 
   describe('Login Endpoint', () => {
