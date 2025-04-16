@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const pool = require('./db');
 
-const app = express();
 const winston = require('winston');
 
 // Configure logging
@@ -17,60 +16,72 @@ const logger = winston.createLogger({
   ]
 });
 
-// Add logging middleware
-app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`);
-  next();
-});
+function createApp() {
+  const app = express();
 
-app.use(express.json());
-app.use(cors());
-
-// Basic token verification
-const verifyToken = (req, res, next) => {
-  const token = req.headers['x-access-token'];
-  if (!token) return res.status(403).send('No token');
-  
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
+  // Add logging middleware
+  app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.path}`);
     next();
-  } catch {
-    res.status(403).send('Invalid token');
-  }
-};
+  });
 
-// Single protected endpoint
-app.get('/api/data', verifyToken, (req, res) => {
-  res.json({ message: 'Protected data' });
-});
+  app.use(express.json());
+  app.use(cors());
 
-// Dashboard endpoint
-app.get('/api/dashboard', verifyToken, async (req, res) => {
-  try {
-    // Example: Fetch some aggregated data
-    const userCount = await pool.query('SELECT COUNT(*) FROM users');
-    const paymentCount = await pool.query('SELECT COUNT(*) FROM payments');
+  // Basic token verification
+  const verifyToken = (req, res, next) => {
+    const token = req.headers['x-access-token'];
+    if (!token) return res.status(403).send('No token');
     
-    res.json({
-      userCount: userCount.rows[0].count,
-      paymentCount: paymentCount.rows[0].count,
-      message: 'Dashboard data'
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch dashboard data' });
-  }
-});
+    try {
+      jwt.verify(token, process.env.JWT_SECRET || 'test-secret');
+      next();
+    } catch {
+      res.status(403).send('Invalid token');
+    }
+  };
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
+  // Single protected endpoint
+  app.get('/api/data', verifyToken, (req, res) => {
+    res.json({ message: 'Protected data' });
+  });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Backend service running on port ${PORT}`);
-  // Verify DB connection on startup
-  pool.query('SELECT 1')
-    .then(() => console.log('Database connected'))
-    .catch(err => console.error('Database connection error', err));
-});
+  // Dashboard endpoint
+  app.get('/api/dashboard', verifyToken, async (req, res) => {
+    try {
+      // Example: Fetch some aggregated data
+      const userCount = await pool.query('SELECT COUNT(*) FROM users');
+      const paymentCount = await pool.query('SELECT COUNT(*) FROM payments');
+      
+      res.json({
+        userCount: userCount.rows[0].count,
+        paymentCount: paymentCount.rows[0].count,
+        message: 'Dashboard data'
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch dashboard data' });
+    }
+  });
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+  });
+
+  return app;
+}
+
+// Only start the server if this file is run directly
+if (require.main === module) {
+  const app = createApp();
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Backend service running on port ${PORT}`);
+    // Verify DB connection on startup
+    pool.query('SELECT 1')
+      .then(() => console.log('Database connected'))
+      .catch(err => console.error('Database connection error', err));
+  });
+}
+
+module.exports = createApp();
