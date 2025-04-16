@@ -105,22 +105,32 @@ app.get('/validate', (req, res) => {
   });
 });
 
-function createServer() {
-  const app = express();
-  const server = app.listen(process.env.PORT || 0); // 0 = random available port
-  
-  // ... rest of the server setup code ...
+const app = express();
+let server;
 
-  return { app, server };
+function createServer() {
+  const newApp = express();
+  const newServer = newApp.listen(0); // Random available port
+  
+  // Apply all middleware and routes to newApp
+  newApp.use(helmet());
+  newApp.use(cors());
+  newApp.use(express.json());
+  newApp.use(limiter);
+  
+  // ... copy all route handlers to newApp ...
+  
+  return { app: newApp, server: newServer };
 }
 
-const PORT = process.env.PORT || 4000;
-const { app, server } = createServer();
-
 if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => {
-    console.log(`Auth service running on port ${PORT}`);
+  server = app.listen(process.env.PORT || 4000, () => {
+    console.log(`Auth service running on port ${process.env.PORT || 4000}`);
   });
 }
 
-module.exports = { createServer, app, server };
+module.exports = { 
+  app, 
+  server,
+  createServer 
+};

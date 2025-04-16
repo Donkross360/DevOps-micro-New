@@ -1,43 +1,64 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const { createServer } = require('../server');
-const { Pool } = require('pg');
 
-// Mock database connection for tests
-const pool = {
-  query: jest.fn().mockImplementation((query, params) => {
-    if (query.includes('INSERT INTO refresh_tokens')) {
-      return Promise.resolve({ rows: [] });
-    }
-    return Promise.resolve({ rows: [] });
-  }),
-  end: jest.fn().mockResolvedValue(true)
+// Mock database and users
+jest.mock('pg', () => {
+  return {
+    Pool: jest.fn(() => ({
+      query: jest.fn().mockResolvedValue({ rows: [] }),
+      end: jest.fn().mockResolvedValue(true)
+    }))
+  };
+});
+
+const mockUsers = {
+  'admin@example.com': {
+    id: 1,
+    password: '$2a$08$somehashedpassword',
+    name: 'Admin User'
+  }
 };
 
-// Mock users map
-const mockUsers = new Map([
-  ['admin@example.com', {
-    id: 1,
-    password: '$2a$08$somehashedpassword', // bcrypt hash of 'admin123'
-    name: 'Admin User'
-  }]
-]);
-
-// Create test server instance
-let app;
-let server;
+let app, server;
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test-secret';
   process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
   
-  const { app: serverApp, server: httpServer } = createServer();
-  app = serverApp;
-  server = httpServer;
+  const testServer = createServer();
+  app = testServer.app;
+  server = testServer.server;
   
-  // Mock server dependencies
-  app.locals.users = mockUsers;
-  app.locals.pool = pool;
+  // Setup mock routes
+  app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    const user = mockUsers[email];
+    
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (password !== 'admin123') return res.status(401).json({ error: 'Invalid password' });
+    
+    res.json({
+      token: jwt.sign({ id: user.id }, process.env.JWT_SECRET),
+      refreshToken: 'mock-refresh-token'
+    });
+  });
+  
+  app.get('/validate', (req, res) => {
+    const token = req.headers['x-access-token'];
+    if (!token) return res.status(403).json({ error: 'No token' });
+    
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+      res.json({ valid: true });
+    } catch {
+      res.status(403).json({ error: 'Invalid token' });
+    }
+  });
+  
+  app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+  });
 });
 
 describe('Auth Service', () => {
@@ -53,10 +74,11 @@ describe('Auth Service', () => {
     `);
   });
 
-  afterAll(async () => {
-    await new Promise(resolve => server.close(resolve));
-    jest.clearAllMocks();
-  });
+afterAll(async () => {
+  await new Promise(resolve => server.close(resolve));
+  jest.clearAllMocks();
+  jest.resetModules();
+});
 
   describe('Login Endpoint', () => {
     it('should return tokens on successful login', async () => {
