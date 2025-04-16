@@ -1,6 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const { createServer } = require('../server');
+const pool = require('../db');
 
 // Mock database and users
 jest.mock('pg', () => {
