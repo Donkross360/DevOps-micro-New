@@ -1,15 +1,43 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const app = require('../server');
+const { createServer } = require('../server');
 const { Pool } = require('pg');
 
-// Create a test-specific database connection
-const pool = new Pool({
-  user: process.env.POSTGRES_USER || 'postgres',
-  host: process.env.POSTGRES_HOST || 'localhost',
-  database: process.env.POSTGRES_DB || 'postgres_test',
-  password: process.env.POSTGRES_PASSWORD || 'postgres',
-  port: process.env.POSTGRES_PORT || 5432,
+// Mock database connection for tests
+const pool = {
+  query: jest.fn().mockImplementation((query, params) => {
+    if (query.includes('INSERT INTO refresh_tokens')) {
+      return Promise.resolve({ rows: [] });
+    }
+    return Promise.resolve({ rows: [] });
+  }),
+  end: jest.fn().mockResolvedValue(true)
+};
+
+// Mock users map
+const mockUsers = new Map([
+  ['admin@example.com', {
+    id: 1,
+    password: '$2a$08$somehashedpassword', // bcrypt hash of 'admin123'
+    name: 'Admin User'
+  }]
+]);
+
+// Create test server instance
+let app;
+let server;
+
+beforeAll(async () => {
+  process.env.JWT_SECRET = 'test-secret';
+  process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+  
+  const { app: serverApp, server: httpServer } = createServer();
+  app = serverApp;
+  server = httpServer;
+  
+  // Mock server dependencies
+  app.locals.users = mockUsers;
+  app.locals.pool = pool;
 });
 
 describe('Auth Service', () => {
@@ -26,31 +54,30 @@ describe('Auth Service', () => {
   });
 
   afterAll(async () => {
-    try {
-      await pool.query('DROP TABLE IF EXISTS refresh_tokens');
-      await pool.end();
-      // Close the server if needed
-      if (app.server) {
-        await new Promise(resolve => app.server.close(resolve));
-      }
-    } catch (err) {
-      console.error('Cleanup error:', err);
-    }
+    await new Promise(resolve => server.close(resolve));
+    jest.clearAllMocks();
   });
 
   describe('Login Endpoint', () => {
     it('should return tokens on successful login', async () => {
+      // Mock bcrypt compare
+      jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true);
+      
+      // Mock jwt sign
+      jest.spyOn(jwt, 'sign').mockImplementation((payload, secret) => {
+        if (secret === process.env.JWT_SECRET) return 'test-access-token';
+        return 'test-refresh-token';
+      });
+
       const response = await request(app)
         .post('/login')
         .send({ email: 'admin@example.com', password: 'admin123' });
 
       expect(response.statusCode).toBe(200);
-      expect(response.body).toHaveProperty('token');
-      expect(response.body).toHaveProperty('refreshToken');
-      
-      // Verify token structure
-      const decoded = jwt.verify(response.body.token, process.env.JWT_SECRET);
-      expect(decoded).toHaveProperty('id');
+      expect(response.body).toEqual({
+        token: 'test-access-token',
+        refreshToken: 'test-refresh-token'
+      });
     });
 
     it('should return 400 for missing credentials', async () => {

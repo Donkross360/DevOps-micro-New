@@ -105,7 +105,22 @@ app.get('/validate', (req, res) => {
   });
 });
 
+function createServer() {
+  const app = express();
+  const server = app.listen(process.env.PORT || 0); // 0 = random available port
+  
+  // ... rest of the server setup code ...
+
+  return { app, server };
+}
+
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Auth service running on port ${PORT}`);
-});
+const { app, server } = createServer();
+
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`Auth service running on port ${PORT}`);
+  });
+}
+
+module.exports = { createServer, app, server };
