@@ -5,12 +5,20 @@ const { createServer } = require('../server');
 const pool = require('../db');
 
 // Mock database
-jest.mock('../db', () => ({
-  query: jest.fn()
-    .mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@example.com', name: 'Test User' }] ) // For registration
-    .mockResolvedValue({ rows: [] }), // Default
-  end: jest.fn().mockResolvedValue(true)
-}));
+jest.mock('../../shared/__mocks__/db');
+const mockDb = require('../../shared/__mocks__/db');
+
+beforeEach(() => {
+  mockDb.query.mockClear();
+  mockDb.end.mockClear();
+  
+  // Setup default user mock responses
+  mockDb.mockUserResponse([{
+    id: 1,
+    email: 'test@example.com', 
+    name: 'Test User'
+  }]);
+});
 
 describe('User Service', () => {
   let app, server;

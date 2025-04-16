@@ -8,10 +8,19 @@ jest.mock('express-rate-limit', () => {
   return jest.fn(() => (req, res, next) => next());
 });
 
-jest.mock('../db', () => ({
-  query: jest.fn().mockResolvedValue({ rows: [] }),
-  end: jest.fn().mockResolvedValue(true)
-}));
+jest.mock('../../shared/__mocks__/db');
+const mockDb = require('../../shared/__mocks__/db');
+
+beforeEach(() => {
+  mockDb.query.mockClear();
+  mockDb.end.mockClear();
+  
+  // Setup default auth mock responses
+  mockDb.mockAuthResponse([{ 
+    token: 'mock-refresh-token',
+    user_id: 1 
+  }]);
+});
 
 const mockUsers = {
   'admin@example.com': {
