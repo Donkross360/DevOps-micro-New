@@ -9,8 +9,16 @@ function LoginPage() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email || !password) {
+      setError('Please fill all fields');
+      return;
+    }
+
+    setLoading(true);
     try {
       const success = await login({ email, password });
       if (success) {
@@ -19,7 +27,9 @@ function LoginPage() {
         setError('Invalid credentials');
       }
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 

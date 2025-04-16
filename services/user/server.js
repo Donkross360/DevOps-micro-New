@@ -29,12 +29,42 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+const bcrypt = require('bcryptjs');
+
+app.post('/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const result = await pool.query(
+      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name',
+      [email, hashedPassword, name]
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
 app.get('/users', verifyToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, email, name FROM users');
     res.json(result.rows);
   } catch (err) {
-    res.status(500).send('Server error');
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, email, name FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
