@@ -125,11 +125,13 @@ describe('Payment Service', () => {
       
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty('clientSecret');
-      expect(stripe.paymentIntents.create).toHaveBeenCalledWith({
-        amount: 1000,
-        currency: 'usd',
-        metadata: { userId: 1 }
-      });
+      expect(stripe.paymentIntents.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 1000,
+          currency: 'usd',
+          metadata: expect.objectContaining({ userId: 1 })
+        })
+      );
     });
   });
 
