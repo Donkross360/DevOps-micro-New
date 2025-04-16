@@ -15,15 +15,17 @@ jest.mock('pg', () => {
 
 // Mock Stripe
 jest.mock('stripe', () => {
+  const mockCreate = jest.fn().mockResolvedValue({
+    id: 'pi_test123',
+    client_secret: 'secret_test123',
+    amount: 1000,
+    currency: 'usd',
+    status: 'requires_payment_method'
+  });
+  
   return jest.fn().mockImplementation(() => ({
     paymentIntents: {
-      create: jest.fn().mockResolvedValue({
-        id: 'pi_test123',
-        client_secret: 'secret_test123',
-        amount: 1000,
-        currency: 'usd',
-        status: 'requires_payment_method'
-      }),
+      create: mockCreate,
       retrieve: jest.fn().mockResolvedValue({
         id: 'pi_test123',
         amount: 1000,

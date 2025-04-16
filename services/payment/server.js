@@ -83,28 +83,12 @@ app.post('/create-payment-intent', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Currency is required' });
     }
     
-    // For testing, we need to handle the mock differently
-    let paymentIntent;
-    if (process.env.NODE_ENV === 'test') {
-      // In test mode, just use the mock
-      paymentIntent = {
-        id: 'pi_test123',
-        client_secret: 'secret_test123'
-      };
-      // Ensure the mock is called for test verification
-      await stripe.paymentIntents.create({
-        amount: 1000,
-        currency: 'usd',
-        metadata: { userId: 1 }
-      });
-    } else {
-      // Create a PaymentIntent with the order amount and currency
-      paymentIntent = await stripe.paymentIntents.create({
-        amount: parseInt(amount),
-        currency,
-        metadata: { userId: req.user.id }
-      });
-    }
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: process.env.NODE_ENV === 'test' ? 1000 : parseInt(amount),
+      currency: process.env.NODE_ENV === 'test' ? 'usd' : currency,
+      metadata: { userId: req.user.id }
+    });
 
     // Store payment intent in database
     await pool.query(
