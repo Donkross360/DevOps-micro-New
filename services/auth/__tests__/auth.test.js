@@ -157,18 +157,16 @@ afterAll(async () => {
     let validToken = 'test-access-token';
 
     it('should validate good tokens', async () => {
-      // Mock jwt verify
-      jest.spyOn(jwt, 'verify').mockImplementation((token, secret, callback) => {
-        callback(null, { id: 1 }); // Simulate successful verification
-      });
-
+      // Mock jwt verify to always succeed
+      jest.spyOn(jwt, 'verify').mockImplementation(() => ({ id: 1 }));
+      
       const response = await request(app)
         .get('/validate')
         .set('x-access-token', 'valid-token');
       
       expect(response.statusCode).toBe(200);
-      expect(response.body).toHaveProperty('valid', true);
-    }, 10000); // Increased timeout
+      expect(response.body).toEqual({ valid: true });
+    });
 
     it('should reject invalid tokens', async () => {
       const tests = [
